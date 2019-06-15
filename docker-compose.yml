@@ -1,0 +1,38 @@
+version: '3.3'
+
+services:
+  app:
+    image: node-app
+    ports:
+      - 8080
+    environment:
+      - SERVICE_PORTS=8080
+    deploy:
+      replicas: 3
+      restart_policy:
+       condition: on-failure
+       max_attempts: 3
+       window: 120s
+    networks:
+      - web
+
+  proxy:
+    image: dockercloud/haproxy
+    depends_on:
+      - app
+    environment:
+      - BALANCE=leastconn
+      - ADDITIONAL_SERVICES=project_dir:app
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - 12001:80
+    networks:
+      - web
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+
+networks:
+  web:
+    driver: overlay
